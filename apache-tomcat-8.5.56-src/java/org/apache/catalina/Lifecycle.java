@@ -175,6 +175,7 @@ public interface Lifecycle {
 
     /**
      * Add a LifecycleEvent listener to this component.
+     * 添加监听器
      *
      * @param listener The listener to add
      */
@@ -183,6 +184,7 @@ public interface Lifecycle {
 
     /**
      * Get the life cycle listeners associated with this life cycle.
+     * 获取所有监听器
      *
      * @return An array containing the life cycle listeners associated with this
      *         life cycle. If this component has no listeners registered, a
@@ -193,6 +195,7 @@ public interface Lifecycle {
 
     /**
      * Remove a LifecycleEvent listener from this component.
+     * 移除某个监听器
      *
      * @param listener The listener to remove
      */
@@ -200,6 +203,7 @@ public interface Lifecycle {
 
 
     /**
+     * 初始化方法
      * Prepare the component for starting. This method should perform any
      * initialization required post object creation. The following
      * {@link LifecycleEvent}s will be fired in the following order:
@@ -214,6 +218,7 @@ public interface Lifecycle {
     public void init() throws LifecycleException;
 
     /**
+     * 启动方法
      * Prepare for the beginning of active use of the public methods other than
      * property getters/setters and life cycle methods of this component. This
      * method should be called before any of the public methods other than
@@ -243,6 +248,7 @@ public interface Lifecycle {
 
 
     /**
+     * 停止方法，和start()对应
      * Gracefully terminate the active use of the public methods other than
      * property getters/setters and life cycle methods of this component. Once
      * the STOP_EVENT is fired, the public methods other than property
@@ -276,6 +282,7 @@ public interface Lifecycle {
     public void stop() throws LifecycleException;
 
     /**
+     * 销毁方法，和init()对应
      * Prepare to discard the object. The following {@link LifecycleEvent}s will
      * be fired in the following order:
      * <ol>
@@ -291,6 +298,7 @@ public interface Lifecycle {
 
     /**
      * Obtain the current state of the source component.
+     * 获取生命周期状态
      *
      * @return The current state of the source component.
      */
@@ -298,6 +306,7 @@ public interface Lifecycle {
 
 
     /**
+     * 获取字符串类型的生命周期状态
      * Obtain a textual representation of the current component state. Useful
      * for JMX. The format of this string may vary between point releases and
      * should not be relied upon to determine component state. To determine
