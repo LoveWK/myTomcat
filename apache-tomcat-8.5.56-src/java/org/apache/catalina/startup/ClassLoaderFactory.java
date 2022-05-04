@@ -162,6 +162,7 @@ public final class ClassLoaderFactory {
         // Construct the "class path" for this class loader
         Set<URL> set = new LinkedHashSet<>();
 
+        // 遍历repositories，对每个repository进行类型判断，并生成URL，每个URL我们都要校验其有效性，有效的URL我们会放到URL集合中
         if (repositories != null) {
             for (Repository repository : repositories)  {
                 if (repository.getType() == RepositoryType.URL) {
@@ -228,6 +229,7 @@ public final class ClassLoaderFactory {
                 log.debug("  location " + i + " is " + array[i]);
             }
 
+        // 从这儿看，最终所有的类加载器都是URLClassLoader的对象~~
         return AccessController.doPrivileged(
                 new PrivilegedAction<URLClassLoader>() {
                     @Override
