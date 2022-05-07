@@ -417,21 +417,25 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         setState(LifecycleState.STARTING);
 
         // Start our defined Container first
+        // 启动Engine
         if (engine != null) {
             synchronized (engine) {
                 engine.start();
             }
         }
 
+        // 启动Executor线程池
         synchronized (executors) {
             for (Executor executor: executors) {
                 executor.start();
             }
         }
 
+        // 启动MapperListener
         mapperListener.start();
 
         // Start our defined Connectors second
+        // 启动Connector
         synchronized (connectorsLock) {
             for (Connector connector: connectors) {
                 try {
@@ -537,7 +541,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         }
 
         // Initialize any Executors
-        // 初始化线程池
+        // 初始化线程池 存在Executor线程池，则进行初始化，默认是没有的
         for (Executor executor : findExecutors()) {
             if (executor instanceof JmxEnabled) {
                 ((JmxEnabled) executor).setDomain(getDomain());
@@ -549,7 +553,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         mapperListener.init();
 
         // Initialize our defined Connectors
-        // 初始化Connectors
+        // 初始化Connectors 而Connector又会对ProtocolHandler进行初始化，开启应用端口的监听,
         synchronized (connectorsLock) {
             for (Connector connector : connectors) {
                 try {

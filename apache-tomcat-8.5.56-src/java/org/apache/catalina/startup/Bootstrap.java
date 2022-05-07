@@ -331,6 +331,7 @@ public final class Bootstrap {
         if (log.isDebugEnabled()) {
             log.debug("Calling startup class " + method);
         }
+        //通过反射调用Catalina的load()方法
         method.invoke(catalinaDaemon, param);
     }
 
@@ -476,7 +477,7 @@ public final class Bootstrap {
                 // 1.实例化
                 Bootstrap bootstrap = new Bootstrap();
                 try {
-                    // 2.初始化
+                    // 2.初始化,类加载器机制入口
                     bootstrap.init();
                 } catch (Throwable t) {
                     handleThrowable(t);
@@ -499,16 +500,16 @@ public final class Bootstrap {
                 command = args[args.length - 1];
             }
 
-            if (command.equals("startd")) {
+            if (command.equals("startd")) {//启动命令
                 args[args.length - 1] = "start";
                 // 3.
                 daemon.load(args);
                 // 4.
                 daemon.start();
-            } else if (command.equals("stopd")) {
+            } else if (command.equals("stopd")) {//停止命令
                 args[args.length - 1] = "stop";
                 daemon.stop();
-            } else if (command.equals("start")) {
+            } else if (command.equals("start")) {//启动命令
                 daemon.setAwait(true);
                 daemon.load(args);
                 daemon.start();

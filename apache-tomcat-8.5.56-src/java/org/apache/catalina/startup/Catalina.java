@@ -545,13 +545,16 @@ public class Catalina {
         initNaming();
 
         // Create and execute our Digester
-        // 解析server.xml文件
+        // 解析server.xml文件，告诉Digester哪个xml标签应该解析成什么类
         Digester digester = createStartDigester();
 
         InputSource inputSource = null;
         InputStream inputStream = null;
         File file = null;
         try {
+            // 首先尝试加载conf/server.xml，省略部分代码......
+            // 如果不存在conf/server.xml，则加载server-embed.xml(该xml在catalina.jar中)，省略部分代码......
+            // 如果还是加载不到xml，则直接return，省略部分代码......
             try {
                 file = configFile();
                 inputStream = new FileInputStream(file);
@@ -610,7 +613,9 @@ public class Catalina {
 
             try {
                 inputSource.setByteStream(inputStream);
+                // 把Catalina作为一个顶级实例
                 digester.push(this);
+                // 解析过程会实例化各个组件，比如Server、Container、Connector等
                 digester.parse(inputSource);
             } catch (SAXParseException spe) {
                 log.warn("Catalina.start using " + getConfigFile() + ": " +
@@ -630,7 +635,7 @@ public class Catalina {
             }
         }
 
-        //初始化服务器设置
+        //初始化服务器设置,给Server设置catalina信息
         getServer().setCatalina(this);
         getServer().setCatalinaHome(Bootstrap.getCatalinaHomeFile());
         getServer().setCatalinaBase(Bootstrap.getCatalinaBaseFile());
@@ -641,7 +646,7 @@ public class Catalina {
         // Start the new server
         try {
             //初始化服务器
-            //-->LifecycleBase->init()
+            //-->LifecycleBase->init() 调用Lifecycle的init阶段
             getServer().init();
         } catch (LifecycleException e) {
             if (Boolean.getBoolean("org.apache.catalina.startup.EXIT_ON_INIT_FAILURE")) {
@@ -691,6 +696,7 @@ public class Catalina {
 
         // Start the new server
         try {
+            //调用Server的start方法，启动Server组件
             getServer().start();
         } catch (LifecycleException e) {
             log.fatal(sm.getString("catalina.serverStartFail"), e);
@@ -708,6 +714,7 @@ public class Catalina {
         }
 
         // Register shutdown hook
+        // 注册勾子，用于安全关闭tomcat
         if (useShutdownHook) {
             if (shutdownHook == null) {
                 shutdownHook = new CatalinaShutdownHook();
@@ -724,6 +731,7 @@ public class Catalina {
             }
         }
 
+        // Bootstrap中会设置await为true，其目的在于让tomcat在shutdown端口阻塞监听关闭命令
         if (await) {
             await();
             stop();
