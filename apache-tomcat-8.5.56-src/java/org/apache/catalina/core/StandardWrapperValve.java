@@ -130,6 +130,7 @@ final class StandardWrapperValve
 
         // Allocate a servlet instance to process this request
         try {
+            // 关键点1：这儿调用Wrapper的allocate()方法分配一个Servlet实例
             if (!unavailable) {
                 servlet = wrapper.allocate();
             }
@@ -169,6 +170,7 @@ final class StandardWrapperValve
         request.setAttribute(Globals.DISPATCHER_REQUEST_PATH_ATTR,
                 requestPathMB);
         // Create the filter chain for this request
+        // 关键点2，创建过滤器链，类似于Pipeline的功能
         ApplicationFilterChain filterChain =
                 ApplicationFilterFactory.createFilterChain(request, wrapper, servlet);
 
@@ -183,6 +185,7 @@ final class StandardWrapperValve
                         if (request.isAsyncDispatching()) {
                             request.getAsyncContextInternal().doInternalDispatch();
                         } else {
+                            // 关键点3，调用过滤器链的doFilter，最终会调用到Servlet的service方法
                             filterChain.doFilter(request.getRequest(),
                                     response.getResponse());
                         }
@@ -196,6 +199,7 @@ final class StandardWrapperValve
                     if (request.isAsyncDispatching()) {
                         request.getAsyncContextInternal().doInternalDispatch();
                     } else {
+                        // 关键点3，调用过滤器链的doFilter，最终会调用到Servlet的service方法
                         filterChain.doFilter
                             (request.getRequest(), response.getResponse());
                     }
@@ -255,11 +259,13 @@ final class StandardWrapperValve
             exception(request, response, e);
         } finally {
             // Release the filter chain (if any) for this request
+            // 关键点4，释放掉过滤器链及其相关资源
             if (filterChain != null) {
                 filterChain.release();
             }
 
             // Deallocate the allocated servlet instance
+            // 关键点5，释放掉Servlet及相关资源
             try {
                 if (servlet != null) {
                     wrapper.deallocate(servlet);
@@ -276,6 +282,7 @@ final class StandardWrapperValve
 
             // If this servlet has been marked permanently unavailable,
             // unload it and release this instance
+            // 关键点6，如果servlet被标记为永远不可达，则需要卸载掉它，并释放这个servlet实例
             try {
                 if ((servlet != null) &&
                     (wrapper.getAvailable() == Long.MAX_VALUE)) {

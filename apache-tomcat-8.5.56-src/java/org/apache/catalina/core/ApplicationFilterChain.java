@@ -167,12 +167,16 @@ public final class ApplicationFilterChain implements FilterChain {
         }
     }
 
+    // 1. `internalDoFilter`方法通过pos和n来调用过滤器链里面的每个过滤器。pos表示当前的过滤器下标，n表示总的过滤器数量
+    // 2. `internalDoFilter`方法最终会调用servlet.service()方法
     private void internalDoFilter(ServletRequest request,
                                   ServletResponse response)
         throws IOException, ServletException {
 
         // Call the next filter if there is one
+        // 1. 当pos小于n时, 则执行Filter
         if (pos < n) {
+            // 2. 得到 过滤器 Filter，执行一次post++
             ApplicationFilterConfig filterConfig = filters[pos++];
             try {
                 Filter filter = filterConfig.getFilter();
@@ -190,6 +194,9 @@ public final class ApplicationFilterChain implements FilterChain {
                     Object[] args = new Object[]{req, res, this};
                     SecurityUtil.doAsPrivilege ("doFilter", filter, classType, args, principal);
                 } else {
+                    // 4. 这里的 filter 的执行 有点递归的感觉, 通过 pos 来控制从 filterChain 里面拿出那个 filter 来进行操作
+                    // 这里把this（filterChain）传到自定义filter里面，我们自定义的filter，会重写doFilter，在这里会被调用，doFilter里面会执行业务逻辑，如果执行业务逻辑成功，则会调用 filterChain.doFilter(servletRequest, servletResponse); ，filterChain就是这里传过去的this；如果业务逻辑执行失败，则return，filterChain终止，后面的servlet.service(request, response)也不会执行了
+                    // 所以在 Filter 里面所调用 return, 则会终止 Filter 的调用, 而下面的 Servlet.service 更本就没有调用到
                     filter.doFilter(request, response, this);
                 }
             } catch (IOException | ServletException | RuntimeException e) {
@@ -228,6 +235,7 @@ public final class ApplicationFilterChain implements FilterChain {
                                            args,
                                            principal);
             } else {
+                //当pos等于n时，过滤器都执行完毕，终于执行了熟悉的servlet.service(request, response)方法。
                 servlet.service(request, response);
             }
         } catch (IOException | ServletException | RuntimeException e) {

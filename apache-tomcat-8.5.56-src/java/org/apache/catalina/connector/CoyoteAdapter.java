@@ -300,7 +300,7 @@ public class CoyoteAdapter implements Adapter {
     public void service(org.apache.coyote.Request req, org.apache.coyote.Response res)
             throws Exception {
 
-        //转换成HttpServlet的Request和Response
+        //1.转换成HttpServlet的Request和Response
         Request request = (Request) req.getNote(ADAPTER_NOTES);
         Response response = (Response) res.getNote(ADAPTER_NOTES);
 
@@ -325,6 +325,7 @@ public class CoyoteAdapter implements Adapter {
             req.getParameters().setQueryStringCharset(connector.getURICharset());
         }
 
+        // 2. 补充header
         if (connector.getXpoweredBy()) {
             response.addHeader("X-Powered-By", POWERED_BY);
         }
@@ -337,12 +338,15 @@ public class CoyoteAdapter implements Adapter {
         try {
             // Parse and set Catalina and configuration specific
             // request parameters
+            // 3. 解析请求，该方法会出现代理服务器、设置必要的header等操作
+            // 用来处理请求映射 (获取 host, context, wrapper, URI 后面的参数的解析, sessionId )
             postParseSuccess = postParseRequest(req, request, res, response);
             if (postParseSuccess) {
                 //check valves if we support async
                 request.setAsyncSupported(
                         connector.getService().getContainer().getPipeline().isAsyncSupported());
                 // Calling the container
+                // 4. 真正进入容器的地方，调用Engine容器下pipeline的阀门
                 connector.getService().getContainer().getPipeline().getFirst().invoke(
                         request, response);
             }
@@ -373,7 +377,11 @@ public class CoyoteAdapter implements Adapter {
                     request.getAsyncContextInternal().setErrorState(throwable, true);
                 }
             } else {
+                //5. 通过request.finishRequest 与 response.finishResponse(刷OutputBuffer中的数据到浏览器) 来完成整个请求
                 request.finishRequest();
+                //将 org.apache.catalina.connector.Response对应的 OutputBuffer 中的数据
+                // 刷到 org.apache.coyote.Response 对应的 InternalOutputBuffer 中,
+                // 并且最终调用 socket对应的 outputStream 将数据刷出去( 这里会组装 Http Response 中的 header 与 body 里面的数据, 并且刷到远端 )
                 response.finishResponse();
             }
 

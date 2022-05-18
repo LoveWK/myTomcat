@@ -78,8 +78,10 @@ public class ErrorReportValve extends ValveBase {
     public void invoke(Request request, Response response) throws IOException, ServletException {
 
         // Perform the request
+        // 1. 先将 请求转发给下一个 Valve
         getNext().invoke(request, response);
 
+        // 2. 这里的 isCommitted 表明, 请求是正常处理结束
         if (response.isCommitted()) {
             if (response.setErrorReported()) {
                 // Error wasn't previously reported but we can't write an error
@@ -98,6 +100,7 @@ public class ErrorReportValve extends ValveBase {
             return;
         }
 
+        // 3. 判断请求过程中是否有异常发生
         Throwable throwable = (Throwable) request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
 
         // If an async request is in progress and is not going to end once this
@@ -112,7 +115,9 @@ public class ErrorReportValve extends ValveBase {
             // Throwable. Tomcat won't do that but other components might.)
             // These are safe to call at this point as we know that the response
             // has not been committed.
+            // 4. 重置 response 里面的数据(此时 Response 里面可能有些数据)
             response.reset();
+            // 5. 这就是我们常看到的 500 错误码
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
 
@@ -122,6 +127,7 @@ public class ErrorReportValve extends ValveBase {
         response.setSuspended(false);
 
         try {
+            // 6. 这里就是将 异常的堆栈信息组合成 html 页面, 输出到前台
             report(request, response, throwable);
         } catch (Throwable tt) {
             ExceptionUtils.handleThrowable(tt);

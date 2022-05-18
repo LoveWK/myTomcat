@@ -581,11 +581,13 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                     getHandler().getGlobal(), rgOname, null);
         }
 
+        // 1. 设置endpoint的名字，默认为：http-nio-{port}
         String endpointName = getName();
         endpoint.setName(endpointName.substring(1, endpointName.length()-1));
         endpoint.setDomain(domain);
 
         //->NioEndpoint->bind()
+        // 2. 初始化endpoint
         endpoint.init();
     }
 
@@ -596,9 +598,11 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
             getLog().info(sm.getString("abstractProtocolHandler.start", getName()));
         }
 
+        // 1. 调用`Endpoint.start()`方法
         endpoint.start();
 
         // Start timeout thread
+        // 2. 开启异步超时线程，线程执行单元为`Asynctimeout`
         asyncTimeout = new AsyncTimeout();
         Thread timeoutThread = new Thread(asyncTimeout, getNameInternal() + "-AsyncTimeout");
         int priority = endpoint.getThreadPriority();
@@ -802,6 +806,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                     }
                 }
                 if (processor == null) {
+                    //关键代码
                     processor = getProtocol().createProcessor();
                     register(processor);
                     if (getLog().isDebugEnabled()) {
@@ -817,6 +822,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
 
                 SocketState state = SocketState.CLOSED;
                 do {
+                    // 关键的代码，终于找到你了
                     state = processor.process(wrapper, status);
 
                     if (state == SocketState.UPGRADING) {

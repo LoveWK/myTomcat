@@ -1069,12 +1069,14 @@ public abstract class AbstractEndpoint<S> {
             if (socketWrapper == null) {
                 return false;
             }
+            // 1. 从`processorCache`里面拿一个`Processor`来处理socket，`Processor`的实现为`SocketProcessor`
             SocketProcessorBase<S> sc = processorCache.pop();
             if (sc == null) {
                 sc = createSocketProcessor(socketWrapper, event);
             } else {
                 sc.reset(socketWrapper, event);
             }
+            // 2. 将`Processor`放到工作线程池中执行
             Executor executor = getExecutor();
             if (dispatch && executor != null) {
                 executor.execute(sc);
@@ -1114,6 +1116,7 @@ public abstract class AbstractEndpoint<S> {
     public abstract void stopInternal() throws Exception;
 
     public void init() throws Exception {
+        // 执行bind()方法
         if (bindOnInit) {
             bind();
             bindState = BindState.BOUND_ON_INIT;
@@ -1188,6 +1191,7 @@ public abstract class AbstractEndpoint<S> {
 
     public final void start() throws Exception {
         if (bindState == BindState.UNBOUND) {
+            // 1. `bind()`已经在`init()`中分析过了
             bind();
             bindState = BindState.BOUND_ON_START;
         }

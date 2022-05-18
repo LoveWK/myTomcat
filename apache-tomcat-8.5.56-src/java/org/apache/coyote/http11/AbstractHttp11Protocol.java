@@ -991,7 +991,7 @@ public abstract class AbstractHttp11Protocol<S> extends AbstractProtocol<S> {
         processor.setMaxKeepAliveRequests(getMaxKeepAliveRequests());
         //开启KeepAlive的Timeout
         processor.setConnectionUploadTimeout(getConnectionUploadTimeout());
-        //http当遇到文件上传时默认的超时时间
+        //http当遇到文件上传时默认的超时时间(300 * 1000)
         processor.setDisableUploadTimeout(getDisableUploadTimeout());
         processor.setRestrictedUserAgents(getRestrictedUserAgents());
         //最大的Post处理尺寸的大小
