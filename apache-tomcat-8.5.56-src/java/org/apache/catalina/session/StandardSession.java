@@ -659,6 +659,7 @@ public class StandardSession implements HttpSession, Session, Serializable {
             return true;
         }
 
+        // 如果指定了最大不活跃时间，才会进行清理，这个时间是 Context.getSessionTimeout()，默认是30分钟
         if (maxInactiveInterval > 0) {
             int timeIdle = (int) (getIdleTimeInternal() / 1000L);
             if (timeIdle >= maxInactiveInterval) {
@@ -713,7 +714,7 @@ public class StandardSession implements HttpSession, Session, Serializable {
          * The servlet spec mandates to ignore request handling time
          * in lastAccessedTime.
          */
-        if (LAST_ACCESS_AT_START) {
+        if (LAST_ACCESS_AT_START) {// 可以通过系统参数改变该值，默认为false
             this.lastAccessedTime = this.thisAccessedTime;
             this.thisAccessedTime = System.currentTimeMillis();
         } else {
@@ -763,10 +764,11 @@ public class StandardSession implements HttpSession, Session, Serializable {
         // Check to see if session has already been invalidated.
         // Do not check expiring at this point as expire should not return until
         // isValid is false
+        //1、校验 isValid 值，如果为 false 直接返回，说明已经被销毁了
         if (!isValid)
             return;
 
-        synchronized (this) {
+        synchronized (this) {// 加锁
             // Check again, now we are inside the sync so this code only runs once
             // Double check locking - isValid needs to be volatile
             // The check of expiring is to ensure that an infinite loop is not
@@ -782,6 +784,7 @@ public class StandardSession implements HttpSession, Session, Serializable {
 
             // Notify interested application event listeners
             // FIXME - Assumes we call listeners in reverse order
+            //2、双重校验 isValid 值，避免并发问题
             Context context = manager.getContext();
 
             // The call to expire() may not have been triggered by the webapp.
@@ -802,6 +805,8 @@ public class StandardSession implements HttpSession, Session, Serializable {
                             HttpSessionListener listener =
                                 (HttpSessionListener) listeners[j];
                             try {
+                                //3、判断是否为 HttpSessionListener，不是则继续循环
+                                //4、向容器发出Destory事件，并调用 HttpSessionListener.sessionDestroyed() 进行通知
                                 context.fireContainerEvent("beforeSessionDestroyed",
                                         listener);
                                 listener.sessionDestroyed(event);
@@ -830,10 +835,12 @@ public class StandardSession implements HttpSession, Session, Serializable {
             }
 
             // Remove this session from our manager's active sessions
+            //5、从 manager 中移除该  session
             manager.remove(this, true);
 
             // Notify interested session event listeners
             if (notify) {
+                //6、向 tomcat 的 SessionListener 发出事件通知，非 HttpSessionListener
                 fireSessionEvent(Session.SESSION_DESTROYED_EVENT, null);
             }
 
@@ -859,6 +866,7 @@ public class StandardSession implements HttpSession, Session, Serializable {
             try {
                 oldContextClassLoader = context.bind(Globals.IS_SECURITY_ENABLED, null);
                 for (String key : keys) {
+                    //7、清除内部的 key/value，避免因为强引用而导致无法回收 Session 对象
                     removeAttributeInternal(key, notify);
                 }
             } finally {

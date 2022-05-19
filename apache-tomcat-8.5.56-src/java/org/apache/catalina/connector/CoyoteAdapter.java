@@ -721,15 +721,19 @@ public class CoyoteAdapter implements Adapter {
             // Now we have the context, we can parse the session ID from the URL
             // (if any). Need to do this before we redirect in case we need to
             // include the session id in the redirect
+            // 尝试从 URL, Cookie, SSL 回话中获取请求的 ID, 并将 mapRequired 设置为 false
             String sessionID;
+            // 1. 是否支持通过 URI 尾缀 JSessionId 的方式来追踪 Session 的变化 (默认是支持的)
             if (request.getServletContext().getEffectiveSessionTrackingModes()
                     .contains(SessionTrackingMode.URL)) {
 
                 // Get the session ID if there was one
+                // 2. 从 URI 尾缀的参数中拿取 jsessionId 的数据 (SessionConfig.getSessionUriParamName 是获取对应cookie的名字, 默认 jsessionId, 可以在 web.xml 里面进行定义)
                 sessionID = request.getPathParameter(
                         SessionConfig.getSessionUriParamName(
                                 request.getContext()));
                 if (sessionID != null) {
+                    // 3. 若从 URI 里面拿取了 jsessionId, 则直接进行赋值给 request
                     request.setRequestedSessionId(sessionID);
                     request.setRequestedSessionURL(true);
                 }
@@ -737,6 +741,7 @@ public class CoyoteAdapter implements Adapter {
 
             // Look for session ID in cookies and SSL session
             try {
+                // 4. 通过 cookie 里面获取 JSessionId 的值
                 parseSessionCookiesId(request);
             } catch (IllegalArgumentException e) {
                 // Too many cookies
@@ -746,6 +751,7 @@ public class CoyoteAdapter implements Adapter {
                 }
                 return true;
             }
+            // 5. 在 SSL 模式下获取 JSessionId 的值
             parseSessionSslId(request);
 
             sessionID = request.getRequestedSessionId();
@@ -1027,6 +1033,7 @@ public class CoyoteAdapter implements Adapter {
         // from a parent context with a session ID may be present which would
         // overwrite the valid session ID encoded in the URL
         Context context = request.getMappingData().context;
+        // 1. Tomcat 是否支持 通过 cookie 机制 跟踪 session
         if (context != null && !context.getServletContext()
                 .getEffectiveSessionTrackingModes().contains(
                         SessionTrackingMode.COOKIE)) {
@@ -1034,21 +1041,29 @@ public class CoyoteAdapter implements Adapter {
         }
 
         // Parse session id from cookies
+        // 2. 获取 Cookie的实际引用对象 (PS: 这里还没有触发 Cookie 解析, 也就是 serverCookies 里面是空数据, 数据还只是存储在 http header 里面)
         ServerCookies serverCookies = request.getServerCookies();
+        // 3. 就在这里出发了 Cookie 解析Header里面的数据 (PS: 其实就是 轮训查找 Header 里面那个 name 是 Cookie 的数据, 拿出来进行解析)
         int count = serverCookies.getCookieCount();
         if (count <= 0) {
             return;
         }
 
+        // 4. 获取 sessionId 的名称 JSessionId
         String sessionCookieName = SessionConfig.getSessionCookieName(context);
 
         for (int i = 0; i < count; i++) {
+            // 5. 轮询所有解析出来的 Cookie
             ServerCookie scookie = serverCookies.getCookie(i);
+            // 6. 比较 Cookie 的名称是否是 jsessionId
             if (scookie.getName().equals(sessionCookieName)) {
                 // Override anything requested in the URL
+                // 7. 是否 jsessionId 还没有解析 (并且只将第一个解析成功的值 set 进去)
                 if (!request.isRequestedSessionIdFromCookie()) {
                     // Accept only the first session id cookie
+                    // 8. 将MessageBytes转成 char
                     convertMB(scookie.getValue());
+                    // 9. 设置 jsessionId 的值
                     request.setRequestedSessionId
                         (scookie.getValue().toString());
                     request.setRequestedSessionCookie(true);
@@ -1058,6 +1073,7 @@ public class CoyoteAdapter implements Adapter {
                             request.getRequestedSessionId());
                     }
                 } else {
+                    // 10. 若 Cookie 里面存在好几个 jsessionid, 则进行覆盖 set 值
                     if (!request.isRequestedSessionIdValid()) {
                         // Replace the session id until one is valid
                         convertMB(scookie.getValue());

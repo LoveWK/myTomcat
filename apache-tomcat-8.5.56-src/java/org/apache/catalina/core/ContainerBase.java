@@ -1351,6 +1351,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
                     "containerBase.backgroundProcess.unexpectedThreadDeath",
                     Thread.currentThread().getName());
             try {
+                // threadDone 是 volatile 变量，由外面的容器控制
                 while (!threadDone) {
                     try {
                         Thread.sleep(backgroundProcessorDelay * 1000L);
@@ -1389,6 +1390,8 @@ public abstract class ContainerBase extends LifecycleMBeanBase
                 container.backgroundProcess();
                 Container[] children = container.findChildren();
                 for (Container child : children) {
+                    // 如果子容器的 backgroundProcessorDelay 参数小于0，则递归处理子容器
+                    // 因为如果该值大于0，说明子容器自己开启了线程处理，因此父容器不需要再做处理
                     if (child.getBackgroundProcessorDelay() <= 0) {
                         processChildren(child);
                     }

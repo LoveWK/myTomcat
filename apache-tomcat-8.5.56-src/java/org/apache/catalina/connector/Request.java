@@ -526,12 +526,14 @@ public class Request implements HttpServletRequest {
     protected void recycleSessionInfo() {
         if (session != null) {
             try {
+                // 更新时间戳
                 session.endAccess();
             } catch (Throwable t) {
                 ExceptionUtils.handleThrowable(t);
                 log.warn(sm.getString("coyoteRequest.sessionEndAccessFail"), t);
             }
         }
+        // 回收 Request 对象的内部信息
         session = null;
         requestedSessionCookie = false;
         requestedSessionId = null;
@@ -2433,9 +2435,11 @@ public class Request implements HttpServletRequest {
     /**
      * @return the session associated with this Request, creating one
      * if necessary.
+     * 获取 request 对应的 session
      */
     @Override
     public HttpSession getSession() {
+        // 这里就是 通过 managerBase.sessions 获取 Session
         Session session = doGetSession(true);
         if (session == null) {
             return null;
@@ -2986,16 +2990,18 @@ public class Request implements HttpServletRequest {
 
 
     // ------------------------------------------------------ Protected Methods
-
+    // create 代表是否创建 StandardSession
     protected Session doGetSession(boolean create) {
 
         // There cannot be a session if no context has been assigned yet
+        // 1. 检验 StandardContext
         Context context = getContext();
         if (context == null) {
             return null;
         }
 
         // Return the current session if it exists and is valid
+        // 2. 校验 Session 的有效性
         if ((session != null) && !session.isValid()) {
             session = null;
         }
@@ -3004,12 +3010,15 @@ public class Request implements HttpServletRequest {
         }
 
         // Return the requested session if it exists and is valid
+        //拿到StandardContext 中对应的StandardManager，Context与 Manager 是一对一的关系
         Manager manager = context.getManager();
         if (manager == null) {
             return null;      // Sessions are not supported
         }
         if (requestedSessionId != null) {
             try {
+                // 3. 通过 managerBase.sessions 获取 Session
+                // 4. 通过客户端的 sessionId 从 managerBase.sessions 来获取 Session 对象
                 session = manager.findSession(requestedSessionId);
             } catch (IOException e) {
                 if (log.isDebugEnabled()) {
@@ -3019,19 +3028,23 @@ public class Request implements HttpServletRequest {
                 }
                 session = null;
             }
+            // 5. 判断 session 是否有效
             if ((session != null) && !session.isValid()) {
                 session = null;
             }
             if (session != null) {
+                // 6. session access +1
                 session.access();
                 return session;
             }
         }
 
         // Create a new session if requested and the response is not committed
+        // 7. 根据标识是否创建 StandardSession ( false 直接返回)
         if (!create) {
             return null;
         }
+        // 当前的 Context 是否支持通过 cookie 的方式来追踪 Session
         boolean trackModesIncludesCookie =
                 context.getServletContext().getEffectiveSessionTrackingModes().contains(SessionTrackingMode.COOKIE);
         if (trackModesIncludesCookie && response.getResponse().isCommitted()) {
@@ -3040,6 +3053,7 @@ public class Request implements HttpServletRequest {
 
         // Re-use session IDs provided by the client in very limited
         // circumstances.
+        // 9. 从客户端读取 sessionID, 并且根据这个 sessionId 创建 Session
         String sessionId = getRequestedSessionId();
         if (requestedSessionSSL) {
             // If the session ID has been obtained from the SSL handshake then
@@ -3079,13 +3093,16 @@ public class Request implements HttpServletRequest {
         } else {
             sessionId = null;
         }
+        // 8. 到这里其实是没有找到 session, 直接创建 Session 出来
         session = manager.createSession(sessionId);
 
         // Creating a new session cookie based on that session
         if (session != null && trackModesIncludesCookie) {
+            // 10. 根据 sessionId 来创建一个 Cookie
             Cookie cookie = ApplicationSessionCookieConfig.createSessionCookie(
                     context, session.getIdInternal(), isSecure());
 
+            // 11. 最后在响应体中写入 cookie
             response.addSessionCookieInternal(cookie);
         }
 
@@ -3093,6 +3110,7 @@ public class Request implements HttpServletRequest {
             return null;
         }
 
+        // 12. session access 计数器 + 1
         session.access();
         return session;
     }
